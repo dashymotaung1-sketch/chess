@@ -47,4 +47,9 @@ public class Queen extends Piece {
         }
         return moves;
     }
+    @Override
+    public Piece copy() {
+        // Creates a brand new Queen object with the same properties
+        return new Queen(this.isWhite, this.row, this.col);
+    }
 }

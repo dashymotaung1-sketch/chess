@@ -2,7 +2,10 @@ package GUI;
 
 import main.Board;
 import Move.Move;
-import piece.Piece;
+import piece.*;
+import piece.Pawn;
+import piece.Queen;
+import players.ComputerPlayer;
 import javax.swing.*;
 import java.awt.*;
 
@@ -10,66 +13,97 @@ public class ChessBoardGUI extends JFrame {
     private JButton[][] squares = new JButton[8][8];
     private Board board;
     private Piece selectedPiece = null;
+    private boolean pvp, playerWhite, isThinking = false;
+    private ComputerPlayer ai;
 
-    public ChessBoardGUI(Board board) {
-        this.board = board;
-        setTitle("Java Chess Project");
+    public ChessBoardGUI(Board board, boolean pvp, boolean white, String diff) {
+        this.board = board; this.pvp = pvp; this.playerWhite = white;
+        if (!pvp) this.ai = new ComputerPlayer(!white, diff);
+
+        setTitle("Java Chess - Stable Version");
         setSize(600, 600);
         setLayout(new GridLayout(8, 8));
 
-        initializeBoard();
-
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Centers the window
+        initBoard();
+        updateIcons();
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
         setVisible(true);
     }
 
-    private void initializeBoard() {
+    private void initBoard() {
         for (int r = 0; r < 8; r++) {
             for (int c = 0; c < 8; c++) {
                 squares[r][c] = new JButton();
-
-                // Color the checkerboard
-                if ((r + c) % 2 == 0) {
-                    squares[r][c].setBackground(Color.WHITE);
-                } else {
-                    squares[r][c].setBackground(Color.LIGHT_GRAY);
-                }
-
-                squares[r][c].setFocusPainted(false);
-
-                // Use final variables for the lambda listener
-                int row = r;
-                int col = c;
-                squares[r][c].addActionListener(e -> handleSquareClick(row, col));
-
+                squares[r][c].setBackground((r+c)%2==0 ? new Color(245, 245, 220) : new Color(130, 160, 95));
+                int row = r, col = c;
+                squares[r][c].addActionListener(e -> handleClick(row, col));
                 add(squares[r][c]);
             }
         }
-        updateIcons();
     }
 
-    private void handleSquareClick(int row, int col) {
+    private void handleClick(int r, int c) {
+        if (isThinking || (!pvp && board.whiteToMove != playerWhite)) return;
+
         if (selectedPiece == null) {
-            // Step 1: Try to select a piece
-            Piece p = board.getPiece(row, col);
+            Piece p = board.getPiece(r, c);
             if (p != null && p.isWhite == board.whiteToMove) {
                 selectedPiece = p;
-                highlightSquare(row, col);
+                squares[r][c].setBorder(BorderFactory.createLineBorder(Color.CYAN, 4));
             }
         } else {
-            // Step 2: Try to move the selected piece
-            Move move = new Move(selectedPiece.row, selectedPiece.col, row, col);
-
+            Move move = new Move(selectedPiece.row, selectedPiece.col, r, c);
             if (board.isValidMove(move)) {
                 board.makeMove(move);
+                handlePromotion(r, c);
                 updateIcons();
+                checkState();
+                if (!pvp && !board.isCheckmate(board.whiteToMove)) triggerAI();
+            } else {
+                JOptionPane.showMessageDialog(this, "Illegal Move!", "Error", JOptionPane.ERROR_MESSAGE);
             }
-
-            // Step 3: Cleanup
             selectedPiece = null;
-            clearHighlights();
+            resetBorders();
         }
+    }
+
+    private void handlePromotion(int r, int c) {
+        Piece p = board.getPiece(r, c);
+        if (p instanceof Pawn && (r == 0 || r == 7)) {
+            String[] opts = {"Queen", "Rook", "Bishop", "Knight"};
+            int choice = JOptionPane.showOptionDialog(this, "Promote to:", "Promotion",
+                    JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, opts, opts[0]);
+            Piece newP = switch(choice) {
+                case 1 -> new Rook(p.isWhite, r, c);
+                case 2 -> new Bishop(p.isWhite, r, c);
+                case 3 -> new Knight(p.isWhite, r, c);
+                default -> new Queen(p.isWhite, r, c);
+            };
+            board.setPiece(r, c, newP);
+        }
+    }
+
+    private void checkState() {
+        if (board.isCheckmate(board.whiteToMove)) {
+            JOptionPane.showMessageDialog(this, "CHECKMATE! Game Over.");
+        } else if (board.isInCheck(board.whiteToMove)) {
+            JOptionPane.showMessageDialog(this, "Check!", "Warning", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void triggerAI() {
+        isThinking = true;
+        new Timer(600, e -> {
+            Move m = ai.getDecision(board);
+            if (m != null) {
+                board.makeMove(m);
+                handlePromotion(m.endR, m.endC);
+                updateIcons();
+                checkState();
+            }
+            isThinking = false;
+        }).start();
     }
 
     private void updateIcons() {
@@ -77,27 +111,14 @@ public class ChessBoardGUI extends JFrame {
             for (int c = 0; c < 8; c++) {
                 Piece p = board.getPiece(r, c);
                 if (p != null) {
-                    String color = p.isWhite ? "w" : "b";
-                    String type = p.getClass().getSimpleName();
-                    // Using 'N' for Knight to distinguish from King
-                    String label = type.equals("Knight") ? "N" : type.substring(0, 1);
-                    squares[r][c].setText(color + label);
-                } else {
-                    squares[r][c].setText("");
-                }
+                    String t = p.getClass().getSimpleName();
+                    squares[r][c].setText((p.isWhite ? "W" : "B") + (t.equals("Knight") ? "N" : t.charAt(0)));
+                } else squares[r][c].setText("");
             }
         }
     }
 
-    private void highlightSquare(int row, int col) {
-        squares[row][col].setBorder(BorderFactory.createLineBorder(Color.YELLOW, 4));
-    }
-
-    private void clearHighlights() {
-        for (int r = 0; r < 8; r++) {
-            for (int c = 0; c < 8; c++) {
-                squares[r][c].setBorder(UIManager.getBorder("Button.border"));
-            }
-        }
+    private void resetBorders() {
+        for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) squares[r][c].setBorder(null);
     }
 }

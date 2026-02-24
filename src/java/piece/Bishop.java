@@ -43,4 +43,6 @@ public class Bishop extends Piece {
         }
         return moves;
     }
+    @Override
+    public Piece copy() { return new Bishop(isWhite, row, col); }
 }

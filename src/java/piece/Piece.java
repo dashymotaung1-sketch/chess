@@ -2,14 +2,12 @@ package piece;
 
 import Move.Move;
 import main.Board;
-
 import java.util.List;
 
 public abstract class Piece {
-    // Change these to protected
     public boolean isWhite;
-    public int row;
-    public int col;
+    public int row, col;
+    public boolean hasMoved = false;
 
     public Piece(boolean isWhite, int row, int col) {
         this.isWhite = isWhite;
@@ -18,7 +16,10 @@ public abstract class Piece {
     }
 
     public abstract List<Move> getPossibleMoves(Board board);
+    public abstract Piece copy();
 
-    public void updatePosition(int endR, int endC) {
+    public void updatePosition(int r, int c) {
+        this.row = r;
+        this.col = c;
     }
 }

@@ -1,16 +1,24 @@
 package main;
 
 import GUI.ChessBoardGUI;
+import players.GameModeDialog;
+import javax.swing.SwingUtilities;
 
 public class Main {
     public static void main(String[] args) {
-        // 1. Create the shared board
-        Board board = new Board();
+        SwingUtilities.invokeLater(() -> {
+            GameModeDialog dialog = new GameModeDialog(null);
+            dialog.setVisible(true);
 
-        // 2. Load pieces (standard start)
-        board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+            Board board = new Board();
+            board.loadFEN("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-        // 3. Start the GUI using that SAME board
-        new ChessBoardGUI(board);
+            new ChessBoardGUI(
+                    board,
+                    dialog.isTwoPlayerMode(),
+                    dialog.isPlayerWhite(),
+                    dialog.getDifficulty()
+            );
+        });
     }
 }

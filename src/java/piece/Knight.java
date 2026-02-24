@@ -35,4 +35,6 @@ public class Knight extends Piece {
         }
         return moves;
     }
+    @Override
+    public Piece copy() { return new Knight(isWhite, row, col); }
 }

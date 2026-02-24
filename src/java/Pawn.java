@@ -39,4 +39,6 @@ public class Pawn extends Piece {
         }
         return moves;
     }
+    @Override
+    public Piece copy() { return new Pawn(isWhite, row, col); }
 }
